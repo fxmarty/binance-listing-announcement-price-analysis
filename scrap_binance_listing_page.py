@@ -15,7 +15,8 @@ class SaveHTML():
     self.iterate()
     
   def go_through_page(self, nth_child_num, save_only=False, custom_selector=""):
-    with open(self.path + 'page' + str(self.index) + '.html', 'w') as f:
+    # format the index as "01", "02", ..., "50" for nice ordering
+    with open(self.path + 'page' + str("{:02d}".format(self.index)) + '.html', 'w') as f:
         f.write(self.driver.page_source)
     
     if not save_only:
