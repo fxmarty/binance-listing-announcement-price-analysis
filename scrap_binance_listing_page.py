@@ -3,6 +3,9 @@ import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
+from config import project_path
+
+import os
 
 class SaveHTML():
   def __init__(self, path):
@@ -44,7 +47,7 @@ class SaveHTML():
     
     self.go_through_page(10)
     
-    for i in range(42):
+    for i in range(43):
         self.go_through_page(11)
     
     self.go_through_page(10)
@@ -57,4 +60,4 @@ class SaveHTML():
     
     self.driver.quit()
 
-SaveHTML(path='/home/felix/Documents/Projets/binance-listing-announcement-price-analysis/pages/')
+SaveHTML(path=os.path.join(project_path, 'pages/'))
