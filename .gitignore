@@ -1,1 +1,4 @@
 .directory
+__pycache__
+geckodriver.log
+
