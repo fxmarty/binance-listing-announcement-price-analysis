@@ -10,14 +10,12 @@ from config import project_path
 
 from selenium import webdriver
 
-"""
 filelist = glob.glob(os.path.join(project_path, 'pages/*.html'))
 
 url = 'https://www.binance.com/en/support/announcement/62a72f3052674fc589ad401e973ce9ab'
 
 page = requests.get(url)
 data = page.text
-"""
 
 soup = BeautifulSoup(data, 'html')
 

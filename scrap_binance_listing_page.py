@@ -42,7 +42,7 @@ class SaveHTML():
         self.go_through_page(9)
         self.go_through_page(10)
 
-        for i in range(43):
+        for _ in range(43):
             self.go_through_page(11)
 
         self.go_through_page(10)
