@@ -29,10 +29,10 @@ index = 1
 
 base_url = 'https://www.binance.com/en/support/announcement/'
 
-output_path = os.path.join(project_path, 'annoucement_pages')
+output_path = os.path.join(project_path, 'dat', 'annoucement_pages')
 
 index = 1
-with open(os.path.join(project_path, 'page_hashes.txt'), 'r') as f:
+with open(os.path.join(project_path, 'dat', 'page_hashes.txt'), 'r') as f:
     for line in f:
         line_stripped = line.rstrip()
         
