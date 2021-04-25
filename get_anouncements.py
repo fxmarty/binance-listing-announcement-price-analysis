@@ -5,59 +5,168 @@ from bs4 import BeautifulSoup
 
 import re
 
+from pycoingecko import CoinGeckoAPI
 
-def get_infos(soup):
-    # Get the full article
-    article = soup.find_all("article")
-
+def get_infos(soup, title, announcement_time, cg_tokens):
     listing_time = None
-    symbols = None
+    symbols = list(set(re.findall("(?<=\()[A-Z0-9]*(?=\))", title)))
+
+    symbols_last_words = dict()
+
+    if len(symbols) != 0:
+        for symbol in symbols:
+            regex = ".+(?=\s\(" + symbol + "\))"
+            regex_search = re.search(regex, title)
+            symbols_last_words[symbol] = regex_search.group().split(' ')[-4:]
+
+    token_names = []
+    '''
+    token_names = []
+    for symbol in symbols:
+        regex = "[A-Za-z0-9]+(?=\s\(" + symbol + "\))"
+        token_names.extend(list(set(re.findall(regex, title))))
+    '''
+
+    cg = CoinGeckoAPI()  # used to retrieve contract address
+    bep20_contract = []
+    erc20_contract = []
+    bep2_contract = []
+
+    date = int(announcement_time[:4] + announcement_time[5:7]
+                + announcement_time[8:10])
+
+    # on the 04/08/2020 onward, Binance changed its template for announcements
+    # and also uses span instead of div for articles' content
+    if date >= 20200804:
+        article = soup.find_all("article")
+    else:
+        article = soup.find_all('div', {'class': 'css-nleihe'})
 
     # Iterate over all paragraphs
+    #print(article)
     for paragraphs in article:
-        symbols = []
-        paragraphs = paragraphs.find_all("div")
-        for paragraph in paragraphs:
-            paragraph = paragraph.text
+        elements = paragraphs.find_all(["div", 'span'])
 
-            # Split the paragraphs into sentences and iterate over it
-            for sentence in paragraph.split("."):
+        possible_contracts = paragraphs.find_all('a', {'href': True})
 
-                # Tokenize the sentence into a list of words
-                words = sentence.replace(
-                    ".", "").replace(",", "").split(" ")
+        for possible_contract in possible_contracts:
+            href = possible_contract.attrs['href']
+            contract = href.rsplit('/', 1)[-1].lower()
+            if 'etherscan.io' in href and contract not in erc20_contract:
+                erc20_contract.append(contract)
+            elif 'bscscan.com' in href and contract not in bep20_contract:
+                bep20_contract.append(contract)
+            elif 'explorer.binance.org' in href and contract not in bep2_contract:
+                bep2_contract.append(contract)
 
-                # If the sentence does not contain "(UTC)" we pass
-                if "(UTC)" in words:
+        res = ''
+        for i in range(len(elements)):
+            res = res + elements[i].text
+        paragraph = res
 
-                    # Oterwise get the index of the word "(UTC)"
-                    indices = [i for i, e in enumerate(
-                        words) if e == "(UTC)"]
-                    if len(indices) == 1:
-                        i = indices[0]
-                        if words[i-1] in ["AM", "PM"]:
-                            hour = words[i-3]
-                            minute = words[i-2]
-                            am_pm = words[i-1]
-                            listing_time = "{} {} {}".format(hour, minute, am_pm)
-                            j_max = i-3
-                        else:
-                            hour = words[i-2]
-                            minute = words[i-1]
-                            listing_time = "{} {}".format(hour, minute)
-                            j_max = i-2
+        if len(symbols) == 0:
+            symbols = list(set(re.findall("(?<=\()[A-Z0-9]*(?=\))", paragraph)))
 
-                        for j in range(0, j_max):
+            for symbol in symbols:
+                regex = ".+(?=\s\(" + symbol + "\))"
+                regex_search = re.search(regex, paragraph)
+                symbols_last_words[symbol] = regex_search.group().split(' ')[-4:]
 
-                            if len(words[j]) > 0:
-                                if words[j][0] == "(" and words[j][-1] == ")":
-                                    symbol = words[j][1:-1]
-                                    symbols.append(symbol)
-                                elif "/" in words[j]:
-                                    symbol = words[j]
-                                    symbols.append(symbol)
-    return listing_time, symbols
+        if listing_time is None:
+            # consider announce and listing year to be the same
+            year = announcement_time[:4]
+            listing_time = re.search(year + ".*?\(UTC\)", paragraph)
+            if listing_time is not None:
+                listing_time = listing_time.group()
 
+    if 'UTC' in symbols:
+        symbols.remove('UTC')
+
+    # use coingecko to retrieve the token name, as well as contract addresses
+    # if they are not already given in the listing page
+    for symbol in symbols:
+        list_coingecko_identification = get_identification_from_symbol(symbol.lower(),
+                                                                       cg_tokens)
+
+        # found on coingecko several tokens with the same symbol, pass additional
+        # test later to select the good one(s)
+        if len(list_coingecko_identification) > 1:
+            pass_filtering_test = True
+        else:
+            pass_filtering_test = False
+
+        for coingecko_token_identification in list_coingecko_identification:
+            coingecko_token_id = coingecko_token_identification['id']
+            coingecko_token_name = coingecko_token_identification['name']
+
+            cg_name_last_words = coingecko_token_name.split(' ')[-4:]
+
+            filtered_condition = True
+
+            if pass_filtering_test:
+                filtered_condition = check_presence(cg_name_last_words,
+                                                    symbols_last_words[symbol])
+
+            if filtered_condition:
+                token_names.append(coingecko_token_name)
+
+                # we need to handle the query limit in coingecko (<100/min)
+                passed = False
+                info_token = None
+                while not passed:
+                    try:
+                        info_token = cg.get_coin_by_id(coingecko_token_id)
+                    except Exception:
+                        print('Sleeping 5 seconds to calm down coingecko...')
+                        time.sleep(5)
+                    if info_token is not None:
+                        passed = True
+
+                for site in info_token['links']['blockchain_site']:
+                    if site is None:
+                        continue
+                    if not site.startswith('http'):
+                        continue
+
+                    contract = site.rsplit('/', 1)[-1].lower()
+                    if 'etherscan.io' in site:
+                        if all(contract != contract_in for contract_in in erc20_contract):
+                            erc20_contract.append(contract)
+                    elif 'bscscan.com' in site:
+                        if all(contract != contract_in for contract_in in bep20_contract):
+                            bep20_contract.append(contract)
+                    elif 'explorer.binance.org' in site:
+                        if all(contract != contract_in for contract_in in bep2_contract):
+                            bep2_contract.append(contract)
+
+    return (listing_time, symbols, token_names,
+            bep20_contract, erc20_contract, bep2_contract)
+
+
+def find_element_in_list(element, list_element):
+    try:
+        index_element = list_element.index(element)
+        return index_element
+    except ValueError:
+        return None
+
+
+def get_identification_from_symbol(symbol, list_of_dict):
+    res = []
+    for token in list_of_dict:
+        if token['symbol'].lower() == symbol.lower():
+            res.append(token)
+    return res
+
+# check that at least one string of `list1_str` is in `list2_str`
+def check_presence(list1_str, list2_str):
+    res = False
+
+    for elem in list1_str:
+        if elem in list2_str:
+            res = True
+            break
+    return res
 
 
 if __name__ == "__main__":
@@ -65,9 +174,11 @@ if __name__ == "__main__":
     annoucements_base_path = "dat/annoucement_pages/"
     all_announcements = sorted(os.listdir(annoucements_base_path))
 
-    df_col = ["announcement", "likely_listing", "title", "announcement_time", "listing_time",
-              "symbols", "token_names"]
-    df = pd.DataFrame(columns=df_col)
+    df_col = ["announcement", "title", "announcement_time",
+              "symbols", "token_names",
+              "bep20_contract", "erc20_contract", 'bep2_contract']
+    df_listings = pd.DataFrame(columns=df_col)
+    df_non_listings = pd.DataFrame(columns=df_col)
 
     announcement_positive_flags = ['launchpool',
                                    'launchpad',
@@ -82,10 +193,14 @@ if __name__ == "__main__":
                                    'stable coin',
                                    'wrapped']
 
-    # those are symbols we do NOT want in crypto names
-    banned_symbols = ['BTC', 'USD']
+    # those are symbols we do NOT want in crypto names, as they are likely
+    # pegged to other assets
+    banned_symbols = ['btc', 'usd']
 
+    cg = CoinGeckoAPI()
+    cg_tokens = cg.get_coins_list()
 
+    #for annoucement in all_announcements[370:385]:
     for annoucement in all_announcements:
         if not annoucement.endswith('.html'):
             continue
@@ -112,27 +227,45 @@ if __name__ == "__main__":
             if any(flag in title.lower() for flag in announcement_negative_flags):
                 likely_listing_announcement = False
 
-            listing_time = ""
-            symbols = ""
-            if likely_listing_announcement:
-                listing_time, symbols = get_infos(soup)
+            # look for banned symbols between parenthesis
+            for symbol in banned_symbols:
+                matches = re.findall("\([a-z]*" + symbol + "[a-z]*\)", title.lower())
+                if len(matches) != 0:
+                    likely_listing_announcement = False
 
-        print(annoucement)
+            print(annoucement)
+            print(title)
+
+            listing_time = ''
+            symbols = []
+            token_names = []
+            bep20_contract = []
+            erc20_contract = []
+            bep2_contract = []
+            if likely_listing_announcement:
+                (listing_time, symbols, token_names,
+                 bep20_contract, erc20_contract,
+                 bep2_contract) = get_infos(soup, title, announcement_time, cg_tokens)
 
         # perform the analysis from 01-01-2020 only
         if not announcement_time.startswith(('2021', '2020')):
             break
 
         line = pd.DataFrame({"announcement": [annoucement],
-                             "likely_listing": [likely_listing_announcement],
                              "title": [title],
                              "announcement_time": [announcement_time],
-                             "listing_time": [listing_time],
                              "symbols": [symbols],
-                             "token_names": [""]}
+                             "token_names": [token_names],
+                             "bep20_contract": [bep20_contract],
+                             "erc20_contract": [erc20_contract],
+                             "bep2_contract": [bep2_contract]}
                             )
-        print(title)
-        print()
-        df = df.append(line)
+        if likely_listing_announcement:
+            df_listings = df_listings.append(line)
+        else:
+            df_non_listings = df_non_listings.append(line)
 
-    df.to_csv("dat/symbols_extracted.csv")
+        print()
+
+    df_listings.to_csv("dat/listings_extracted.csv")
+    df_non_listings.to_csv("dat/non_listings_extracted.csv")
