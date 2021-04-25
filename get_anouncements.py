@@ -20,12 +20,6 @@ def get_infos(soup, title, announcement_time, cg_tokens):
             symbols_last_words[symbol] = regex_search.group().split(' ')[-4:]
 
     token_names = []
-    '''
-    token_names = []
-    for symbol in symbols:
-        regex = "[A-Za-z0-9]+(?=\s\(" + symbol + "\))"
-        token_names.extend(list(set(re.findall(regex, title))))
-    '''
 
     cg = CoinGeckoAPI()  # used to retrieve contract address
     bep20_contract = []
@@ -172,7 +166,13 @@ def check_presence(list1_str, list2_str):
 if __name__ == "__main__":
 
     annoucements_base_path = "dat/annoucement_pages/"
-    all_announcements = sorted(os.listdir(annoucements_base_path))
+
+    # we reverse the order to discard any announcement of a previously listed symbol,
+    # was e.g. a problem with SafePal token
+    all_announcements = sorted(os.listdir(annoucements_base_path), reverse=True)
+
+    all_symbols = []
+    duplicates = []
 
     df_col = ["announcement", "title", "announcement_time",
               "symbols", "token_names",
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     cg = CoinGeckoAPI()
     cg_tokens = cg.get_coins_list()
 
-    #for annoucement in all_announcements[370:385]:
+    #for annoucement in all_announcements[500:520]:
     for annoucement in all_announcements:
         if not annoucement.endswith('.html'):
             continue
@@ -218,6 +218,10 @@ if __name__ == "__main__":
             announcement_time = soup.find_all("div", {"class": "css-17s7mnd"})
             assert len(announcement_time) == 1
             announcement_time = announcement_time[0].text
+
+            # perform the analysis from 01-01-2020 only
+            if not announcement_time.startswith(('2021', '2020')):
+                continue
 
             likely_listing_announcement = False
 
@@ -247,10 +251,6 @@ if __name__ == "__main__":
                  bep20_contract, erc20_contract,
                  bep2_contract) = get_infos(soup, title, announcement_time, cg_tokens)
 
-        # perform the analysis from 01-01-2020 only
-        if not announcement_time.startswith(('2021', '2020')):
-            break
-
         line = pd.DataFrame({"announcement": [annoucement],
                              "title": [title],
                              "announcement_time": [announcement_time],
@@ -260,6 +260,14 @@ if __name__ == "__main__":
                              "erc20_contract": [erc20_contract],
                              "bep2_contract": [bep2_contract]}
                             )
+
+        # the symbol has already been seen, likely a false positive
+        if not check_presence(symbols, all_symbols):
+            all_symbols.extend(symbols)
+        else:
+            likely_listing_announcement = False
+            duplicates.extend(symbols)
+
         if likely_listing_announcement:
             df_listings = df_listings.append(line)
         else:
@@ -267,5 +275,11 @@ if __name__ == "__main__":
 
         print()
 
-    df_listings.to_csv("dat/listings_extracted.csv")
-    df_non_listings.to_csv("dat/non_listings_extracted.csv")
+    print('Discarded duplicates:', duplicates)
+
+    # go back in the sorted order
+    df_listings = df_listings[::-1]
+    df_non_listings = df_non_listings[::-1]
+
+    df_listings.to_csv("dat/listings_extracted.csv", index=False)
+    df_non_listings.to_csv("dat/non_listings_extracted.csv", index=False)
