@@ -1,0 +1,7 @@
+bitfinex
+probit
+hitbtc
+bittrex
+kucoin
+ascendex
+vcc

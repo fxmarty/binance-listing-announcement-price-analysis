@@ -200,7 +200,7 @@ if __name__ == "__main__":
     cg = CoinGeckoAPI()
     cg_tokens = cg.get_coins_list()
 
-    #for annoucement in all_announcements[500:520]:
+    # for annoucement in all_announcements[-366:]:
     for annoucement in all_announcements:
         if not annoucement.endswith('.html'):
             continue
@@ -251,27 +251,55 @@ if __name__ == "__main__":
                  bep20_contract, erc20_contract,
                  bep2_contract) = get_infos(soup, title, announcement_time, cg_tokens)
 
-        line = pd.DataFrame({"announcement": [annoucement],
-                             "title": [title],
-                             "announcement_time": [announcement_time],
-                             "symbols": [symbols],
-                             "token_names": [token_names],
-                             "bep20_contract": [bep20_contract],
-                             "erc20_contract": [erc20_contract],
-                             "bep2_contract": [bep2_contract]}
-                            )
+        # skip, this assert, but it will need to be checked manually
+        # assert len(symbols) == len(token_names)
 
-        # the symbol has already been seen, likely a false positive
-        if not check_presence(symbols, all_symbols):
-            all_symbols.extend(symbols)
-        else:
-            likely_listing_announcement = False
-            duplicates.extend(symbols)
+        # we will handle the case where the symbol has not been detected
+        if len(symbols) != 0:
+            for i, symbol in enumerate(symbols):
+                line = pd.DataFrame({"announcement": [annoucement],
+                                    "title": [title],
+                                    "announcement_time": [announcement_time],
+                                    "symbols": [symbol],
+                                    "token_names": [token_names],
+                                    "bep20_contract": [bep20_contract],
+                                    "erc20_contract": [erc20_contract],
+                                    "bep2_contract": [bep2_contract]}
+                                    )
 
-        if likely_listing_announcement:
-            df_listings = df_listings.append(line)
+                # the symbol has already been seen, likely a false positive
+                if not check_presence([symbol], all_symbols):
+                    all_symbols.append(symbol)
+                else:
+                    likely_listing_announcement = False
+                    duplicates.append(symbol)
+
+                if likely_listing_announcement:
+                    df_listings = df_listings.append(line)
+                else:
+                    df_non_listings = df_non_listings.append(line)
         else:
-            df_non_listings = df_non_listings.append(line)
+            line = pd.DataFrame({"announcement": [annoucement],
+                                "title": [title],
+                                "announcement_time": [announcement_time],
+                                "symbols": [symbols],
+                                "token_names": [token_names],
+                                "bep20_contract": [bep20_contract],
+                                "erc20_contract": [erc20_contract],
+                                "bep2_contract": [bep2_contract]}
+                                )
+
+            # the symbol has already been seen, likely a false positive
+            if not check_presence(symbols, all_symbols):
+                all_symbols.extend(symbols)
+            else:
+                likely_listing_announcement = False
+                duplicates.extend(symbols)
+
+            if likely_listing_announcement:
+                df_listings = df_listings.append(line)
+            else:
+                df_non_listings = df_non_listings.append(line)
 
         print()
 
