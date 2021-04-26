@@ -1,36 +1,3 @@
-
-import datetime
-import pytz
-
-utc_time = datetime.datetime.utcnow()
-##
-abc = tz.gettz('US/Pacific')
-dat = datetime.datetime(2010, 9, 25, 10, 36)
-dat.tzinfo
-dat.astimezone(tz.tzutc())
-
-##
-
-# a timestamp I'd like to convert
-#my_timestamp = datetime.datetime.now()
-
-my_timestamp = datetime.datetime(2020, 1, 26, 14, 20, 41, 647458)
-
-# create both timezone objects
-old_timezone = pytz.timezone("Europe/Paris")
-new_timezone = pytz.timezone("UTC")
-
-# two-step process
-localized_timestamp = old_timezone.localize(my_timestamp)
-new_timezone_timestamp = localized_timestamp.astimezone(new_timezone)
-
-##
-def convert_french_to_utc(time_fr):
-
-
-
-##
-
 import ccxt
 
 import pandas as pd
@@ -66,8 +33,6 @@ fr_timezone = pytz.timezone("Europe/Paris")
 utc_timezone = pytz.timezone("UTC")
 
 markets_dict, df_listing = get_market_pairs()
-
-##
 
 for index, row in df_listing.iterrows():
     symbol = row['symbols']
