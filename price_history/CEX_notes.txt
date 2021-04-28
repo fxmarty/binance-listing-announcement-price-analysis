@@ -1,0 +1,12 @@
+missing:
+- hotbit
+- mxc
+- hoo.com
+- bilaxy
+
+There but not quite:
+- Poloniex --> only 5min candles, cf https://docs.poloniex.com/#returnchartdata
+- gate.io --> can not get 1m and 5m candle in the past
+- okex --> can not get 1min and 5min candles in the last
+
+11245296 
