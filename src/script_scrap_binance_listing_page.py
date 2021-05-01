@@ -1,34 +1,33 @@
 import os
 import time
-from config import project_path
 from selenium import webdriver
+from cfg.config import project_path
 from selenium.webdriver.common.by import By
 
 
 class SaveHTML():
     def __init__(self, path):
         self.driver = webdriver.Firefox()
-
         self.index = 1
         self.path = path
         self.iterate()
 
     def go_through_page(self, nth_child_num, save_only=False, custom_selector=""):
-        # Format the index as "01", "02", ..., "50" for nice ordering
+        """
+        This function formats the index as "01", "02", ..., "50" for nice ordering
+        """
+
         with open(self.path + 'page' + str("{:02d}".format(self.index)) + '.html', 'w') as f:
             f.write(self.driver.page_source)
 
         if not save_only:
             if custom_selector == "":
-                self.driver.find_element(By.CSS_SELECTOR,
-                                         ".mirror:nth-child("
-                                         + str(nth_child_num)
-                                         + ") > .css-ew2l8i"
-                                         ).click()
+                element_css = ".mirror:nth-child(" + str(nth_child_num) + ") > .css-ew2l8i"
+                self.driver.find_element_by_css_selector(element_css).click()
             else:
-                self.driver.find_element(
-                    By.CSS_SELECTOR, custom_selector).click()
+                self.driver.find_element_by_css_selector(custom_selector).click()
             self.index += 1
+
             # This is extremely ugly, but works to wait for the load to finish
             time.sleep(1)
 
@@ -46,13 +45,9 @@ class SaveHTML():
             self.go_through_page(11)
 
         self.go_through_page(10)
-
         self.go_through_page(9)
-
         self.go_through_page(8)
-
         self.go_through_page(-1, save_only=True)  # to save the last page
-
         self.driver.quit()
 
 
