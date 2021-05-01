@@ -1,5 +1,4 @@
 import os
-import sys
 import glob
 import requests
 from bs4 import BeautifulSoup
@@ -17,15 +16,15 @@ if __name__ == "__main__":
 
     driver = webdriver.Firefox()
 
-    base_url = 'https://www.binance.com/en/support/announcement/'
-    output_path = os.path.join(project_path, 'dat', 'annoucement_pages')
+    base_url = "https://www.binance.com/en/support/announcement/"
+    output_path = os.path.join(project_path, "dat", "annoucement_pages")
 
-    with open(os.path.join(project_path, 'dat', 'page_hashes.txt'), 'r') as f:
+    with open(os.path.join(project_path, "dat", "page_hashes.txt"), "r") as f:
         for index, line in enumerate(f):
             line_stripped = line.rstrip()
             driver.get(os.path.join(base_url, line_stripped))
-            index_formatted = str("{:03d}".format(index+1))
-            with open(os.path.join(output_path, index_formatted + '.html'), 'w') as f_out:
+            index_formatted = str("{:03d}".format(index + 1))
+            with open(os.path.join(output_path, index_formatted + ".html"), "w") as f_out:
                 f_out.write(driver.page_source)
 
         driver.quit()

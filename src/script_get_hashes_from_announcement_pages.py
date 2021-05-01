@@ -1,5 +1,4 @@
 import os
-import sys
 import glob
 from bs4 import BeautifulSoup
 from cfg.config import project_path
