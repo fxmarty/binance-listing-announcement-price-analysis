@@ -89,7 +89,9 @@ if __name__ == "__main__":
             if likely_listing_announcement:
                 listing_time, symbols, token_names,
                 bep20_contract, erc20_contract,
-                bep2_contract = get_information_from_announcement(soup, title, announcement_time, cg_tokens)
+                bep2_contract = get_information_from_announcement(soup, title,
+                                                                  announcement_time,
+                                                                  cg_tokens)
 
         # Skip this assert, but it will need to be checked manually
         # assert len(symbols) == len(token_names)

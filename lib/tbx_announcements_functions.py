@@ -6,7 +6,12 @@ from lib.tbx_data_utils import check_presence
 
 def get_identification_from_symbol(symbol, list_of_dict):
     """
-    TODO: add function description
+    `list_of_dict` is exepected to be generated from Coingecko's API
+    `get_coins_list()` method. It holds a list of dictionary, where one dictionary
+    contains information about one token.
+
+    Returns the list of tokens (represented as a dict each) from Coingecko that
+    match the symbol `symbol`.
     """
 
     res = []
@@ -18,7 +23,10 @@ def get_identification_from_symbol(symbol, list_of_dict):
 
 def get_information_from_announcement(soup, title, announcement_time, cg_tokens):
     """
-    TODO: add function description
+    This function is used to return useful information about a given listing
+    (where `title` and `announcement_time` have already been retried).
+
+    Returns listing_time, symbols, token_names, bep20_contract, erc20_contract, bep2_contract.
     """
 
     listing_time = None
