@@ -44,7 +44,7 @@ query trades{
 result = client.execute(query)
 
 
-#parsed = json.loads(result)
+# parsed = json.loads(result)
 print(json.dumps(result, indent=4, sort_keys=True))
 
-#print(result)
+# print(result)
