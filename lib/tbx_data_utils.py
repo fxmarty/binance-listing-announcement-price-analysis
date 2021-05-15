@@ -5,7 +5,8 @@ import pandas as pd
 
 def check_presence(list1_str, list2_str):
     """
-    TODO: add function descritpion
+    Returns `True` if at least one element of `list1_str`
+    is in `list2_str`
     """
 
     intersection = [value for value in list1_str if value in list2_str]
@@ -49,7 +50,8 @@ def convert_ohlcv_from_1m_to(precision, data_list):
             current_volume += data_list[i * n_aggregate + j][5]
         current_close = data_list[i * n_aggregate + (n_aggregate - 1)][2]
 
-        res.append([current_time, current_open, current_max, current_min, current_close, current_volume])
+        res.append([current_time, current_open, current_max,
+                    current_min, current_close, current_volume])
 
         current_min = np.inf
         current_max = -np.inf
@@ -63,7 +65,8 @@ def convert_ohlcv_from_1m_to(precision, data_list):
 
 def find_element_in_list(element, list_element):
     """
-    TODO: add function description
+    Returns the index of an element in a list if it is present,
+    but returns `None` otherwise
     """
 
     try:
@@ -75,13 +78,17 @@ def find_element_in_list(element, list_element):
 
 def get_market_pairs():
     """
-    TODO: add function description
+    Returns a dictionary s.t. its keys are exchanges names, and pairs
+    lists of pairs available on the corresponding exchange.
+
+    Returns also the loaded data from Binance listings announcements.
     """
 
     with open("dat/good_CEX.txt", "r") as f:
         exchanges = [line.rstrip() for line in f]
 
-    df_listing = pd.read_csv("dat/listings_extracted_manual_edits.csv", converters={"token_names": eval})
+    df_listing = pd.read_csv("dat/listings_extracted_manual_edits.csv",
+                             converters={"token_names": eval})
 
     markets_dict = dict()
     for exchange_name in exchanges:
@@ -94,8 +101,10 @@ def get_market_pairs():
 
 def check_substring_presence(substring, str_list):
     """
-    This function checks a symbol `substring` (e.g. 'ABC') in a list of pairs, for example
-    str_list = ['ABC/USD', 'BTC/USD', 'USD/EUR', 'EUR/ABC']. In this example returns ['ABC/USD', 'EUR/ABC']
+    This function checks a symbol `substring` (e.g. 'ABC') in a list of pairs,
+    for example str_list = ['ABC/USD', 'BTC/USD', 'USD/EUR', 'EUR/ABC'].
+
+    In this example returns ['ABC/USD', 'EUR/ABC'].
     """
 
     res = []
