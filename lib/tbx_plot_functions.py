@@ -3,14 +3,17 @@ import pandas as pd
 import mplfinance as mpf
 
 
-def plot_candles(candles_list, title="", save_path=None, index_marker=None):
+def plot_candles(candles_list, unit, title="", save_path=None, index_marker=None):
     """
-    This function is wrapper method to either plot on the fly candles' graph or save it
+    This function is wrapper method to either plot on the fly candles' graph
+    or save it
+
+    `unit` is either "ms' or "s".
     """
 
     candles_array = np.array(candles_list)
     index_df = pd.DataFrame({"Date": candles_array[:, 0].astype(int)})
-    index_df["Date"] = pd.to_datetime(index_df["Date"], unit="ms")
+    index_df["Date"] = pd.to_datetime(index_df["Date"], unit=unit)
     dataset = pd.DataFrame(
         {
             "Open": candles_array[:, 1],
@@ -29,19 +32,11 @@ def plot_candles(candles_list, title="", save_path=None, index_marker=None):
         apd = mpf.make_addplot(signal, type="scatter", markersize=30, marker="^", alpha=0.5)
         plots_list.append(apd)
 
+    print(dataset)
     if save_path is not None:
         save_params = dict(fname=save_path, dpi=300, bbox_inches="tight")
-        mpf.plot(
-            dataset,
-            type="candle",
-            volume=True,
-            show_nontrading=True,
-            style="charles",
-            title=title,
-            addplot=plots_list,
-            savefig=save_params,
-        )
+        mpf.plot(dataset, type="candle", volume=True, show_nontrading=True,
+                 style="charles", title=title, addplot=plots_list, savefig=save_params)
     else:
-        mpf.plot(
-            dataset, type="candle", volume=True, show_nontrading=True, style="charles", title=title, addplot=plots_list
-        )
+        mpf.plot(dataset, type="candle", volume=True, show_nontrading=True,
+                 style="charles", title=title, addplot=plots_list)

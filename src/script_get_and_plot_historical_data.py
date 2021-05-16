@@ -2,18 +2,24 @@ import os
 import ccxt
 import pytz
 import datetime
+
+import pandas as pd
+
 from lib.tbx_plot_functions import plot_candles
 from lib.tbx_data_utils import get_market_pairs
 from lib.tbx_data_utils import convert_ohlcv_from_1m_to
 from lib.tbx_data_utils import check_substring_presence
 
 
-if __name__ == "__main___":
+if __name__ == "__main__":
 
     fr_timezone = pytz.timezone("Europe/Paris")
     utc_timezone = pytz.timezone("UTC")
 
-    markets_dict, df_listing = get_market_pairs()
+    df_listing = pd.read_csv("dat/listings_extracted_manual_edits.csv",
+                             converters={"token_names": eval})
+
+    markets_dict = get_market_pairs()
 
     for index, row in df_listing.iterrows():
         symbol = row["symbols"]
@@ -31,7 +37,8 @@ if __name__ == "__main___":
         local_time_formatted = fr_timezone.localize(local_time_formatted)
         utc_time = local_time_formatted.astimezone(utc_timezone)
 
-        dir_path = os.path.join("dat/listings_data", utc_time.strftime("%Y-%m-%dT%H:%MZ") + "_" + symbol)
+        dir_path = os.path.join("dat/listings_data",
+                                utc_time.strftime("%Y-%m-%dT%H:%MZ") + "_" + symbol)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
 
@@ -42,7 +49,8 @@ if __name__ == "__main___":
 
         present_in_exchanges = dict()
         for exchange_name in markets_dict:
-            represented_pairs = check_substring_presence(symbol, markets_dict[exchange_name])
+            represented_pairs = check_substring_presence(symbol,
+                                                         markets_dict[exchange_name])
 
             exchange = getattr(ccxt, exchange_name)({"enableRateLimit": True})
 
@@ -52,8 +60,9 @@ if __name__ == "__main___":
 
                 try:
                     candles = exchange.fetch_ohlcv(
-                        pair, timeframe="1m", since=exchange.parse8601(utc_time_shifted.isoformat())
-                    )
+                                pair, timeframe="1m",
+                                since=exchange.parse8601(utc_time_shifted.isoformat())
+                                )
                 except Exception as e:
                     print("Could not get candle:", e)
                     continue
@@ -61,7 +70,9 @@ if __name__ == "__main___":
                 try:
                     # Check the returned time from the exchange corresponds to the
                     # listing time on Binance
-                    cond = exchange.iso8601(candles[0][0])[:13] == utc_time_shifted.isoformat()[:13]
+                    cond = exchange.iso8601(
+                                candles[0][0]
+                                )[:13] == utc_time_shifted.isoformat()[:13]
 
                     # We have sensible data available, i.e. volume is not zero and
                     # the price is not 0. For now, only save figures but data analysis
@@ -72,17 +83,20 @@ if __name__ == "__main___":
 
                         file_name = exchange_name + "_" + pair_formatted + "_1m"
                         file_path = os.path.join(dir_path, file_name + ".png")
-                        plot_candles(candles[:150], title=file_name, index_marker=20, save_path=file_path)
+                        plot_candles(candles[:150], title=file_name, index_marker=20,
+                                     save_path=file_path, unit="ms")
 
                         res = convert_ohlcv_from_1m_to("5m", candles)
                         file_name = exchange_name + "_" + pair_formatted + "_5m"
                         file_path = os.path.join(dir_path, file_name + ".png")
-                        plot_candles(res[:150], title=file_name, index_marker=4, save_path=file_path)
+                        plot_candles(res[:150], title=file_name, index_marker=4,
+                                     save_path=file_path, unit="ms")
 
                         res = convert_ohlcv_from_1m_to("15m", candles)
                         file_name = exchange_name + "_" + pair_formatted + "_15m"
                         file_path = os.path.join(dir_path, file_name + ".png")
-                        plot_candles(res, title=file_name, save_path=file_path)
+                        plot_candles(res, title=file_name, save_path=file_path,
+                                     unit="ms")
                     else:
                         continue
 

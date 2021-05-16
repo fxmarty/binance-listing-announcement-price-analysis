@@ -16,10 +16,11 @@ if __name__ == '__main__':
     print(exchange.iso8601(candles[0][0]))
 
     res = convert_ohlcv_from_1m_to('1m', candles)
-    plot_candles(res[:150], title="1min", save_path='1min.png')
+    plot_candles(res[:150], title="1min", save_path='1min.png', unit="ms")
 
     res = convert_ohlcv_from_1m_to('5m', candles)
-    plot_candles(res[:150], title="5min", index_marker=10, save_path='5min.png')
+    plot_candles(res[:150], title="5min", index_marker=10, save_path='5min.png',
+                 unit="ms")
 
     res = convert_ohlcv_from_1m_to('15m', candles)
-    plot_candles(res, title="15min", save_path='15min.png')
+    plot_candles(res, title="15min", save_path='15min.png', unit="ms")

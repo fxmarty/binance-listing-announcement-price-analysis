@@ -15,7 +15,7 @@ client = Client(transport=transport, fetch_schema_from_transport=True)
 query = gql(
     """
 query trades{
-  swaps(where:{pair: "0xdfa42ba0130425b21a1568507b084cc246fb0c8f"}, orderBy: timestamp, orderDirection: asc, first:3, block: {number:12328864 }) {
+  swaps(where:{pair: "0xdfa42ba0130425b21a1568507b084cc246fb0c8f"}, orderBy: timestamp, orderDirection: desc, first:3, block: {number:12328864 }) {
     id
     timestamp
     amount0In

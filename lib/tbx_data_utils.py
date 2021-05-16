@@ -80,15 +80,10 @@ def get_market_pairs():
     """
     Returns a dictionary s.t. its keys are exchanges names, and pairs
     lists of pairs available on the corresponding exchange.
-
-    Returns also the loaded data from Binance listings announcements.
     """
 
     with open("dat/good_CEX.txt", "r") as f:
         exchanges = [line.rstrip() for line in f]
-
-    df_listing = pd.read_csv("dat/listings_extracted_manual_edits.csv",
-                             converters={"token_names": eval})
 
     markets_dict = dict()
     for exchange_name in exchanges:
@@ -96,7 +91,7 @@ def get_market_pairs():
         exchange = getattr(ccxt, exchange_name)({"enableRateLimit": True})
         markets_dict[exchange_name] = list(exchange.load_markets().keys())
 
-    return markets_dict, df_listing
+    return markets_dict
 
 
 def check_substring_presence(substring, str_list):
