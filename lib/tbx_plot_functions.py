@@ -36,7 +36,7 @@ def plot_candles(candles_list, unit, title="", save_path=None, index_marker=None
     if save_path is not None:
         save_params = dict(fname=save_path, dpi=300, bbox_inches="tight")
         mpf.plot(dataset, type="candle", volume=True, show_nontrading=True,
-                 style="charles", title=title, addplot=plots_list, savefig=save_params)
+                 style="binance", title=title, addplot=plots_list, savefig=save_params)
     else:
         mpf.plot(dataset, type="candle", volume=True, show_nontrading=True,
-                 style="charles", title=title, addplot=plots_list)
+                 style="binance", title=title, addplot=plots_list)

@@ -43,12 +43,33 @@ def convert_ohlcv_from_1m_to(precision, data_list):
 
     for i in range(length_result):
         current_time = data_list[i * n_aggregate][0]
-        current_open = data_list[i * n_aggregate][1]
-        for j in range(n_aggregate):
-            current_min = min(current_min, data_list[i * n_aggregate + j][3])
-            current_max = max(current_max, data_list[i * n_aggregate + j][4])
-            current_volume += data_list[i * n_aggregate + j][5]
-        current_close = data_list[i * n_aggregate + (n_aggregate - 1)][2]
+
+        buffer = np.array(data_list[i * n_aggregate:(i + 1) * n_aggregate])
+
+        # np.where returns a tuple
+        buffer2 = np.where(np.isnan(buffer[:, 1]) == False)[0]
+
+        if len(buffer2) == 0:
+            current_open = np.nan
+        else:
+            current_open = buffer2[-1]
+
+        # np.where returns a tuple
+        buffer2 = np.where(np.isnan(buffer[:, 4]) == False)[0]
+
+        if len(buffer2) == 0:
+            current_close = np.nan
+        else:
+            current_close = buffer2[-1]
+
+        if current_open != np.nan:  # at least one swap happened
+            for j in range(n_aggregate):
+                current_min = min(current_min, data_list[i * n_aggregate + j][3])
+                current_max = max(current_max, data_list[i * n_aggregate + j][2])
+                current_volume += data_list[i * n_aggregate + j][5]
+        else:
+            current_min = np.nan
+            current_max = np.nan
 
         res.append([current_time, current_open, current_max,
                     current_min, current_close, current_volume])

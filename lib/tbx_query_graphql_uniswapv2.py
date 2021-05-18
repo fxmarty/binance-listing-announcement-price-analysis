@@ -1,19 +1,10 @@
 from gql import gql, Client
-from gql.transport.aiohttp import AIOHTTPTransport
 
-import json
 import numpy as np
 
 import web3
 
-# Select your transport with a defined url endpoint
-transport = AIOHTTPTransport(url="https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2")
-
-# Create a GraphQL client using the defined transport
-client = Client(transport=transport, fetch_schema_from_transport=True)
-
-# on mainnet
-w3 = web3.Web3(web3.Web3.HTTPProvider('https://mainnet.infura.io/v3/2087d99dcbd0422496ac13960fae645d'))
+from lib.tbx_retrieve_block_time import retrieve_block_from_date
 
 
 def get_query(pair_address, number_of_transactions, block_number,
@@ -50,7 +41,7 @@ query trades{{
 }}
 """
     gql_query = gql(query_string)
-    return client.execute(gql_query)['swaps']
+    return gql_client.execute(gql_query)['swaps']
 
 
 """
@@ -155,24 +146,129 @@ def construct_ohlcv(pair_address, block_number, upper_block_number,
 
     return res
 
-# Execute the query on the transport
-# result = client.execute(query)
 
+# expect `block_number` to be the first of a given minute (ideally)
+def construct_ohlcv_uniform(pair_address, block_number, n_minutes,
+                            reference_symbol, gql_client, w3):
 
-# parsed = json.loads(result)
-#print(json.dumps(result, indent=4, sort_keys=True))
+    res = []
+    n_done = 0
 
-address = '0xdfa42ba0130425b21a1568507b084cc246fb0c8f'
+    result = get_query(pair_address, 1, block_number, gql_client)
 
-result = get_query('0xdfa42ba0130425b21a1568507b084cc246fb0c8f',
-                4, 11628864, client)
+    if len(result) == 0:
+        raise ValueError(f"Querying The Graph for the pair address {pair_address}"
+                         f" from block {block_number} did not yield any result. "
+                         f"Are you sure the provided inputs to "
+                         f"`construct_ohlcv_uniform` are correct?")
 
-##
-res = construct_ohlcv(address, 11628864 - 30 * 20, 11628864, 30, 'USDC',
-                      client, w3)
+    # we need to determine which token is our reference token, e.g. for volume
+    if result[0]["pair"]["token0"]["symbol"] == reference_symbol:
+        ref_index = 0
+        sec_index = 1
+    elif result[0]["pair"]["token1"]["symbol"] == reference_symbol:
+        sec_index = 0
+        ref_index = 1
+    else:
+        raise ValueError(f"Reference symbol indicated to be {reference_symbol}, "
+                         f"but pair symbols are {result[0]['pair']['token0']['symbol']}"
+                         f" and {result[0]['pair']['token1']['symbol']}.")
 
-##
-from lib.tbx_plot_functions import plot_candles
+    # will hold the swap amounts
+    total = [-1, -1]
 
-##
-plot_candles(res, title="Hehe", unit="s")
+    limit_blocks = [block_number - 1]
+    timestamp_start = w3.eth.get_block(block_number)["timestamp"]
+    timestamp_start = timestamp_start - timestamp_start % 60  # start at a round minute
+    print("Computing block numbers delimiting minutes...")
+    for i in range(1, n_minutes + 1):
+        limit_block = retrieve_block_from_date(timestamp_start + 60 * i, w3,
+                                               limit_down=limit_blocks[-1] - 1,
+                                               limit_up=limit_blocks[-1] + 100)
+        print(limit_block)
+        limit_blocks.append(limit_block)
+
+    for i in range(n_minutes - 1, -1, -1):
+        print(f'Processing minute {i}...')
+        timestamp = timestamp_start + i * 60
+        current_min = np.inf
+        current_max = -np.inf
+        current_open = np.nan
+        current_close = np.nan
+        current_volume = 0
+
+        last_swap = True
+        first_swap = False
+        last_id = ""
+        stop = False
+
+        # last block in the current minute. If there is no block in the current minute,
+        # the check with `limit_blocks[i]` prevents to write crap data
+        n_block_current = limit_blocks[i + 1] - 1
+
+        while True:
+            # need to check that current_block is not the same as previously...
+            result = get_query(pair_address, 25, n_block_current, gql_client)
+
+            if len(result) == 0:
+                stop = True
+
+            for j, swap in enumerate(result):
+                if (int(swap["transaction"]["blockNumber"])
+                        > limit_blocks[i]):
+                    print(swap)
+
+                    """
+                    # we need this in case we need to call `get_query` several times,
+                    # as there may be more than 100 swaps in `grouping_number` blocks.
+                    # As we call `get_query` with the last block seen, it could be
+                    # that there are duplicates.
+                    if last_id == swap["id"]:
+                        continue
+                    """
+
+                    # we don't care about which the direction the swap is made
+                    total[ref_index] = (float(swap[f"amount{ref_index}In"])
+                                        + float(swap[f"amount{ref_index}Out"]))
+                    total[sec_index] = (float(swap[f"amount{sec_index}In"])
+                                        + float(swap[f"amount{sec_index}Out"]))
+
+                    current_volume += total[ref_index]
+                    rate = total[ref_index] / total[sec_index]
+
+                    current_min = min(current_min, rate)
+                    current_max = max(current_max, rate)
+
+                    # always assured that the last writeup will be the open
+                    current_open = rate
+
+                    if last_swap:
+                        current_close = rate
+                        last_swap = False
+                else:
+                    # we went up to the last swap without going enough back
+                    # in time, go further starting from the new `n_block_current`
+                    if j == 24:
+                        n_old_block = n_block_current
+                        n_block_current = int(swap["transaction"]["blockNumber"])
+
+                        if n_old_block == n_block_current:
+                            raise ValueError("More than 25 swaps were included" \
+                                             " in the same block, we will fall" \
+                                             " into an infinite loop.")
+                    else:
+                        stop = True
+                        break
+
+            if stop is True:
+                if current_volume == 0:
+                    current_max = np.nan
+                    current_min = np.nan
+
+                current_res = [timestamp, current_open, current_max,
+                               current_min, current_close, current_volume]
+
+                res.insert(0, current_res)
+                break
+
+    return res
