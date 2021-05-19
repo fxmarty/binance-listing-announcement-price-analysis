@@ -7,9 +7,9 @@ Repository architecture:
 
 - cfg: contains config files
 - dat: contains data
-- lib: contains functions. Python files should be named as "tbx_xxx_functions.py" of "tbx_xxx_utils.py"
+- lib: contains functions. Python files should be named as `tbx_*.py`
 - sandbox: contains test scripts
-- src: contains main scripts to execute. Python files should be named as "script_do_something.py"
+- Upper folder: contains Python files should be executed, and named as `script_*.py`
 
 Formatter:
 
