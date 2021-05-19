@@ -19,7 +19,7 @@ res = w3.eth.get_block(6440727)
 ##
 print(w3.isConnected())
 ##
-with open('/home/felix/Documents/Projets/binance-listing-announcement-price-analysis/DEX/example_abi.abi', 'r') as f:
+with open('./DEX/example_abi.abi', 'r') as f:
     abi = f.readlines()
 
 abi = json.loads(abi[0])
@@ -60,7 +60,7 @@ n_closest = retrieve_block_from_date(my_timestamp, w3)
 transac = w3.eth.get_transaction('0x55701b70e3221a2c48428ea1321f584dec466a9e1bdc6ae737ef87a7b7856b3a')
 
 ## pair contract on mainnet, check its address
-with open('/home/felix/Documents/Projets/binance-listing-announcement-price-analysis/DEX/uniswap_v2_factory.abi', 'r') as f:
+with open('./DEX/uniswap_v2_factory.abi', 'r') as f:
     abi = f.readlines()
 
 abi = json.loads(abi[0])
@@ -85,7 +85,7 @@ print(w3.isConnected())
 res = w3.eth.get_block(6440727)
 
 ##
-with open('/home/felix/Documents/Projets/binance-listing-announcement-price-analysis/sandbox/DEX/pancakeswap_v2_factory.abi', 'r') as f:
+with open('./sandbox/DEX/pancakeswap_v2_factory.abi', 'r') as f:
     abi = f.readlines()
 
 abi = json.loads(abi[0])
