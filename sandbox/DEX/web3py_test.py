@@ -29,7 +29,9 @@ contract = w3.eth.contract('0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', abi=abi
 
 ##
 my_account = w3.eth.account.create('Nobody expects the Spanish Inquisition!')
+print(dir(my_account))
 
+##
 nonce = w3.eth.getTransactionCount(my_account.address)
 
 ##

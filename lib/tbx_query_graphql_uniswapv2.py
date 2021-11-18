@@ -1,4 +1,4 @@
-from gql import gql, Client
+import gql
 
 import numpy as np
 import asyncio
@@ -49,7 +49,7 @@ query trades{{
     }}
 }}
 """
-    gql_query = gql(query_string)
+    gql_query = gql.gql(query_string)
 
     while True:
         try:
@@ -58,6 +58,9 @@ query trades{{
         except gql.transport.exceptions.TransportQueryError:
             print("gql.transport.exceptions.TransportQueryError,"
                   " calling again `execute`...")
+        except asyncio.TimeoutError:
+            print("asyncio.TimeoutError, calling again `execute`...")
+
     return result
 
 
@@ -169,12 +172,7 @@ def construct_ohlcv_uniform(pair_address, block_number, n_minutes,
     res = []
     n_done = 0
 
-    while True:
-        try:
-            result = get_query(pair_address, 1, block_number, gql_client)
-            break
-        except asyncio.TimeoutError:
-            print("asyncio.TimeoutError, calling again `get_query`...")
+    result = get_query(pair_address, 1, block_number, gql_client)
 
     if len(result) == 0:
         warnings.warn(f"Querying The Graph for the pair address {pair_address}"
@@ -232,13 +230,7 @@ def construct_ohlcv_uniform(pair_address, block_number, n_minutes,
         n_block_current = limit_blocks[i + 1] - 1
 
         while True:
-            while True:
-                try:
-                    # need to check that current_block is not the same as previously...
-                    result = get_query(pair_address, n_queries, n_block_current, gql_client)
-                    break
-                except asyncio.TimeoutError:
-                    print("asyncio.TimeoutError, calling again `get_query`...")
+            result = get_query(pair_address, n_queries, n_block_current, gql_client)
 
             if len(result) == 0:
                 stop = True
